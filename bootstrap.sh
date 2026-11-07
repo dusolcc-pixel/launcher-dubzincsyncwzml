@@ -7,7 +7,7 @@ OWNER="dusolcc-pixel"
 PRIVATE_REPO="zincdubsyncewzml"
 PRIVATE_BRANCH="main"
 
-LAUNCHER_REPO="dubzincsyncwzml"
+LAUNCHER_REPO="launcher-dubzincsyncwzml"
 LAUNCHER_BRANCH="main"
 REPO_DIR="$HOME/DubSync-Resource-Managed"
 
