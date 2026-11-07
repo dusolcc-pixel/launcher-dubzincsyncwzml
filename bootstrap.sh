@@ -9,7 +9,7 @@ PRIVATE_BRANCH="main"
 
 LAUNCHER_REPO="launcher-dubzincsyncwzml"
 LAUNCHER_BRANCH="main"
-REPO_DIR="$HOME/DubSync-Resource-Managed"
+REPO_DIR="$HOME/zincdubsyncewzml"
 
 RAW_BASE="https://raw.githubusercontent.com/${OWNER}/${LAUNCHER_REPO}/${LAUNCHER_BRANCH}"
 VAULT_URL="${RAW_BASE}/vault.enc"
