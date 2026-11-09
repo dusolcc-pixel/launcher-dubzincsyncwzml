@@ -123,7 +123,7 @@ GIT_URL="https://github.com/${OWNER}/${PRIVATE_REPO}.git"
 say "Downloading your private DubSync repository..."
 if [[ -d "$REPO_DIR/.git" ]]; then
   # Remove the previous runtime-only asyncio patch before fast-forwarding.
-  git -C "$REPO_DIR" checkout -- bot/telegram_bot.py 2>/dev/null || true
+  git -C "$REPO_DIR" checkout -- bot/telegram_bot.py src/ffmpeg.rs 2>/dev/null || true
   git -C "$REPO_DIR" -c credential.helper= pull --ff-only origin "$PRIVATE_BRANCH"
 elif [[ -e "$REPO_DIR" ]]; then
   die "$REPO_DIR exists but is not a Git checkout. Remove or rename it before retrying."
@@ -143,6 +143,40 @@ s = p.read_text(encoding="utf-8")
 if s.rstrip().endswith("await run_bot()"):
     s = s.rstrip()[:-len("await run_bot()")] + "asyncio.run(run_bot())\n"
     p.write_text(s, encoding="utf-8")
+PY
+
+say "Applying bounded Matroska audio/video interleaving fix..."
+python3 - <<'PY'
+from pathlib import Path
+import re
+
+p = Path("src/ffmpeg.rs")
+s = p.read_text(encoding="utf-8")
+marker = '    cmd.args(["-max_interleave_delta", "1000000"]);'
+if marker in s:
+    print("Mux interleaving fix already present.")
+else:
+    replacement = '''    // Keep the interleave queue bounded without using FFmpeg's 10 s default.
+    // Sparse PGS/SRT subtitle packets can otherwise make some Matroska players
+    // buffer audio/video unevenly. Use a positive 1 s limit: FFmpeg documents
+    // a value of 0 as waiting for a packet from every output stream, which can
+    // grow the queue when subtitle streams are sparse.
+    cmd.args(["-max_interleave_delta", "1000000"]);
+    cmd.arg(output);'''
+    patterns = [
+        r"    // Use FFmpeg's default interleaving limit\. Disabling the limit caused\n"
+        r"    // excessive buffering and OOM kills when remuxing files with PGS subtitles\.\n"
+        r"    cmd\.arg\(output\);",
+        r'    cmd\.args\(\["-max_interleave_delta", "0"\]\);\n    cmd\.arg\(output\);',
+    ]
+    for pattern in patterns:
+        s, count = re.subn(pattern, replacement, s, count=1)
+        if count:
+            break
+    else:
+        raise SystemExit("Could not safely apply mux fix: src/ffmpeg.rs has an unknown remux option block.")
+    p.write_text(s, encoding="utf-8")
+    print("Applied 1,000,000 µs (1 s) mux interleave limit.")
 PY
 
 say "Preparing Python environment..."
